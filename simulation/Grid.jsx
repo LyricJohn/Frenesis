@@ -42,14 +42,18 @@ const Grid = ({ setCameraZoom }) => {
 
   const [points, setPoints] = useState([]); // List for active points
 
+  const getRandomSpeed = (hiSpeed, loSpeed) => {
+    return Math.floor(Math.random() * (loSpeed - hiSpeed + 1)) + hiSpeed;
+  };
+  
   const growPixel = (point) => {
     const { x, y, speedIndex, movesLeft } = point;
+    
     const adjacentCells = [
       [x + 1, y], [x - 1, y], [x, y + 1],
       [x, y - 1], [x + 1, y + 1], [x - 1, y - 1], 
       [x + 1, y - 1], [x - 1, y + 1],
     ];
-
     const freeCells = adjacentCells.filter(([nx, ny]) => {
       const wrappedX = (nx + GRID_SIZE) % GRID_SIZE;
       const wrappedY = (ny + GRID_SIZE) % GRID_SIZE;
@@ -58,17 +62,26 @@ const Grid = ({ setCameraZoom }) => {
 
     if (freeCells.length > 0) {
       const [newX, newY] = freeCells[Math.floor(Math.random() * freeCells.length)];
-      let newSpeedIndex = speedIndex;
-      if (Math.random() > 0.98) {
+      const newSpeedIndex = getRandomSpeed(
+        SPEEDS[speedIndex].hiSpeed,
+        SPEEDS[speedIndex].loSpeed
+      );
+      /* if (Math.random() > 0.98) {
         newSpeedIndex = Math.max(0, speedIndex - 1);
-      };
+      }; */
+
+      // Initialise movesLeft (1 to 5 inclusively) for purple pixel
+      if (SPEEDS[speedIndex].color === "purple" && movesLeft === undefined) {
+        newMovesLeft = Math.floor(Math.random() * 5) + 1;
+      }
 
       const newPoint = {
         x: (newX + GRID_SIZE) % GRID_SIZE,
         y: (newY + GRID_SIZE) % GRID_SIZE,
         speedIndex: newSpeedIndex,
-        color: SPEEDS[newSpeedIndex].color,
-        movesLeft: SPEEDS[newSpeedIndex].color === "purple" ? movesLeft - 1 : undefined,
+        color: SPEEDS[speedIndex].color,
+        movesLeft: newMovesLeft,
+        speed: newSpeed,
       };
 
       setPoints((prev) => [...prev, newpoint]);
@@ -87,17 +100,26 @@ const Grid = ({ setCameraZoom }) => {
 
   useEffect(() => {
     const timers = points.map((point, idx) => {
-      const loSpeed = SPEEDS[point.speedIndex].loSpeed;
-      const hiSpeed = SPEEDS[point.speedIndex].hiSpeed;
-      const speed = Math.floor(Math.random() * (hiSpeed - loSpeed + 1) + loSpeed) * 1000;
+      const speed = point.speed * 1000;
 
       return setTimeout(() => {
-        if (point.color === "purple" && point.movesLeft <= 0) {
-          // Unless purple, and/or purple with 0 movesLeft
-          growPixel({ ...point, speedIndex: SPEEDS.length - 1 });
+        if (point.color === "purple") {
+          if (point.movesLeft > 0) {
+            // Unless purple, and/or purple with 0 movesLeft
+            growPixel({ ...point, movesLeft: point.movesLeft - 1 });
+          }
         } else {
-          growPixel(point);
+          growPixel({
+            ...point,
+            speedIndex: 0,
+            color: "blue",
+            speed: getRandomSpeed(SPEEDS[0].hiSpeed, SPEEDS[0].loSpeed),
+          });
         }
+      } else {
+        // All other colors grow normally
+        growPixel(point);
+      }
 
         setPoints((prev) => prev.filter((_, i) => i !==idx));
       }, speed);
