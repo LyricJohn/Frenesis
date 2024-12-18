@@ -45,14 +45,81 @@ const Grid = ({ setCameraZoom }) => {
   const growPixel = (point) => {
     const { x, y, speedIndex, movesLeft } = point;
     const adjacentCells = [
-      
+      [x + 1, y], [x - 1, y], [x, y + 1],
+      [x, y - 1], [x + 1, y + 1], [x - 1, y - 1], 
+      [x + 1, y - 1], [x - 1, y + 1],
     ];
-  }
+
+    const freeCells = adjacentCells.filter(([nx, ny]) => {
+      const wrappedX = (nx + GRID_SIZE) % GRID_SIZE;
+      const wrappedY = (ny + GRID_SIZE) % GRID_SIZE;
+      return !grid[wrappedY][wrappedX];
+    });
+
+    if (freeCells.length > 0) {
+      const [newX, newY] = freeCells[Math.floor(Math.random() * freeCells.length)];
+      let newSpeedIndex = speedIndex;
+      if (Math.random() > 0.98) {
+        newSpeedIndex = Math.max(0, speedIndex - 1);
+      };
+
+      const newPoint = {
+        x: (newX + GRID_SIZE) % GRID_SIZE,
+        y: (newY + GRID_SIZE) % GRID_SIZE,
+        speedIndex: newSpeedIndex,
+        color: SPEEDS[newSpeedIndex].color,
+        movesLeft: SPEEDS[newSpeedIndex].color === "purple" ? movesLeft - 1 : undefined,
+      };
+
+      setPoints((prev) => [...prev, newpoint]);
+      setGrid((prev) => {
+        const newGrid = [...prev];
+        newGrid[newPoint.y][newPoint.x] = newPoint.color;
+        return newGrid;
+      });
+
+      // Camera zoom-out logic
+      if (newX <= 2 || newY <= 2 || newX >= GRID_SIZE - 2 || newY >= GRID_SIZE - 2) {
+        setCameraZoom((prev) => prev + );
+      }
+    }
+  };
+
+  useEffect(() => {
+    const timers = points.map((point, idx) => {
+      const loSpeed = SPEEDS[point.speedIndex].loSpeed;
+      const hiSpeed = SPEEDS[point.speedIndex].hiSpeed;
+      const speed = Math.floor(Math.random() * (hiSpeed - loSpeed + 1) + loSpeed) * 1000;
+
+      return setTimeout(() => {
+        if (point.color === "purple" && point.movesLeft <= 0) {
+          // Unless purple, and/or purple with 0 movesLeft
+          growPixel({ ...point, speedIndex: SPEEDS.length - 1 });
+        } else {
+          growPixel(point);
+        }
+
+        setPoints((prev) => prev.filter((_, i) => i !==idx));
+      }, speed);
+    });
+
+    return () => timers.forEach(clearTimeout);
+  }, [points]);
+  
 
   const handleCellClick = (x, y) => {
+    if (grid[y][x]) return;
+
+    const newPoint = {
+      x,
+      y,
+      speedIndex: SPEEDS.LENGTH - 2,
+      color: "blue",
+    };
+    setPoints((prev) => [...prev, newPoint]);
     setGrid((prev) => {
       const newGrid = [...prev];
-      newGrid[y][x] = { color: "blue", speed: 10 };
+      newGrid[y][x] = "blue";
       return newGrid;
     });
   };
@@ -64,8 +131,7 @@ const Grid = ({ setCameraZoom }) => {
           <Cell
             key={`${x}-${y}`}
             position={[x - GRID_SIZE / 2, -y + GRID_SIZE, 0]}
-            filled={!!cell}
-            color={cell?.color}
+            color={cell}
             onClick{() => handleCellClick(x, y)}
           />
         ))
@@ -75,10 +141,25 @@ const Grid = ({ setCameraZoom }) => {
 };
 
 const App = () => {
+  const [cameraZoom, setCameraZoom] = useState(INITIAL_ZOOM);
+  const cameraRef = useRef();
+
+  useFrame(() => {
+    if (cameraRef.current) {
+      cameraRef.current.position.z = cameraZoom;
+    }
+  });
+  
   return (
-    <Canvas camera={{position: [0, 0, 20]}}>
-      <ambientLight />
-      <Grid />
+    <Canvas>
+      <PerspectiveCamera makeDefault ref={cameraRef} position={{position: [0, 0, cameraZoom]}} />
+      <ambientLight intensity {0.5} />
+      <EffectComposer>
+        <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />
+      </EffectComposer>
+      <Grid setCameraZoom={setCameraZoom} />
     </Canvas>
   )
 }
+
+export default App;
