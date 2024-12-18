@@ -1,31 +1,53 @@
-import React, { useState, useRef } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { useState, useRef, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
+import { EffectCOmposer, Bloom } from "@react-three/postprocessing";
 
-const GRID_SIZE = 10;
+const GRID_SIZE = 20;
 
-const Cell = ({ position, onClick, filled, color }) => {
+const SPEEDS = [
+  { color : "blue", hiSpeed: 10, loSpeed: 16 },
+  { color : "green", hiSpeed: 8, loSpeed: 12 },
+  { color : "yellow", hiSpeed: 6, loSpeed: 10 },
+  { color : "orange", hiSpeed: 4, loSpeed: 8 },
+  { color : "red", hiSpeed: 2, loSpeed: 6 },
+  { color : "purple", hiSpeed: 1, loSpeed: 4 },
+];
+
+const INITIAL_ZOOM = 20;
+
+const Cell = ({ position, color, onClick }) => {
   return (
     <mesh
       position={position}
       onClick={onClick}
     >
-      {/* Invisible Grid Outline */}
-      <boxGeometry args={[1, 1, 0.1]} />
+      <boxGeometry args={[1, 1, 0.5]} />
       <meshStandardMaterial
-        color={filled ? color : "black"}
-        transparent opacity={0.2}
+        color={color || "black"}
         roughness={0.2}
+        transparent
+        opacity={color ? 0.8 : 0.2}
       />
     </mesh>
   );
 };
 
-const Grid = () => {
+const Grid = ({ setCameraZoom }) => {
   const [grid, setgrid] = useState(
     Array.from({ length: GRID_SIZE }, () =>
       Array.from({ length: GRID_SIZE }, () => null)
     )
   );
+
+  const [points, setPoints] = useState([]); // List for active points
+
+  const growPixel = (point) => {
+    const { x, y, speedIndex, movesLeft } = point;
+    const adjacentCells = [
+      
+    ];
+  }
 
   const handleCellClick = (x, y) => {
     setGrid((prev) => {
